@@ -4,24 +4,20 @@ namespace TimKippDev\Affiliatizer;
 
 class Affiliatizer {
 
-    const AFFILIATIZER_TYPE_REPLACEMENT = 'replace';
+    const AFFILIATIZER_TYPE_APPEND_PATH = 'append-path';
+    const AFFILIATIZER_TYPE_APPEND_PARAMS = 'append-params';
     const AFFILIATIZER_TYPE_REDIRECT = 'redirect';
 
     private static $AFFILIATE_DATA_TYPE = 'type';
     private static $AFFILIATE_DATA_DESTINATION = 'destination';
-    private static $AFFILIATE_DATA_REPLACERS = 'replacers';
+    private static $AFFILIATE_DATA_PARAMS = 'params';
+    private static $AFFILIATE_DATA_PATH = 'path';
 
     // holds data that maps a given domain with its affiliate data replacement values
     private $affiliateDataMap = [];
 
     /**
      * @param array $affiliateDataMap
-     * 
-     * @example 
-     * [
-     *     'replace.com' => [ 'type' => 'replace', 'replacers' => [ 'subtag' => 'timkipp' ] ],
-     *     'redirect.com' => [ 'type' => 'redirect', 'destination' => 'https://sendmehere.com?url=<URL>' ]
-     * ]
      */
     public function __construct(array $affiliateDataMap)
     {
@@ -68,15 +64,21 @@ class Affiliatizer {
 
         switch ($affiliateInfo['type'])
         {
-            case self::AFFILIATIZER_TYPE_REPLACEMENT:
+            case self::AFFILIATIZER_TYPE_APPEND_PATH:
+                // append affiliate info to the end of the original url (before query params)
+                $pathToAppend = '/' . ltrim($affiliateInfo[self::$AFFILIATE_DATA_PATH], '/');
+                $urlParts['path'] = (!array_key_exists('path', $urlParts)) ? $pathToAppend : rtrim($urlParts['path'], '/') . $pathToAppend;
+                $finalUrl = $this->buildUrlWithQueryParams($urlParts, $queryParams);
+                break;
+            case self::AFFILIATIZER_TYPE_APPEND_PARAMS:
                 // add affiliate info to query parameters
-                $replacers = $affiliateInfo[self::$AFFILIATE_DATA_REPLACERS];
-                foreach ($replacers as $key => $value)
+                $params = $affiliateInfo[self::$AFFILIATE_DATA_PARAMS];
+                foreach ($params as $key => $value)
                 {
                     $queryParams[$key] = $value;
                 }
                 $finalUrl = $this->buildUrlWithQueryParams($urlParts, $queryParams);
-            break;
+                break;
             case self::AFFILIATIZER_TYPE_REDIRECT:
                 $finalUrl = $this->buildRedirectUrl($originalUrl, $affiliateInfo['destination']);
                 break;
@@ -173,13 +175,17 @@ class Affiliatizer {
 
             $type = $data[self::$AFFILIATE_DATA_TYPE];
 
-            if ($type == self::AFFILIATIZER_TYPE_REPLACEMENT && (!array_key_exists(self::$AFFILIATE_DATA_REPLACERS, $data) || !is_array($data[self::$AFFILIATE_DATA_REPLACERS])))
+            if ($type == self::AFFILIATIZER_TYPE_APPEND_PARAMS && (!array_key_exists(self::$AFFILIATE_DATA_PARAMS, $data) || !is_array($data[self::$AFFILIATE_DATA_PARAMS])))
             {
-                throw new \Exception('affiliate data array must contain a key named "' . self::$AFFILIATE_DATA_REPLACERS . '" and an array of data for domain: ' . $domain);
+                throw new \Exception('affiliate data array must contain a key named "' . self::$AFFILIATE_DATA_PARAMS . '" and an array of data for domain: ' . $domain);
             }
             else if ($type == self::AFFILIATIZER_TYPE_REDIRECT && !array_key_exists(self::$AFFILIATE_DATA_DESTINATION, $data))
             {
                 throw new \Exception('affiliate data array must contain a key named "' . self::$AFFILIATE_DATA_DESTINATION . '" for domain: ' . $domain);
+            }
+            else if ($type == self::AFFILIATIZER_TYPE_APPEND_PATH && !array_key_exists(self::$AFFILIATE_DATA_PATH, $data))
+            {
+                throw new \Exception('affiliate data array must contain a key named "' . self::$AFFILIATE_DATA_PATH . '" for domain: ' . $domain);
             }
         }
     }

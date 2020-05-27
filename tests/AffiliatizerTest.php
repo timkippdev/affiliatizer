@@ -9,21 +9,29 @@ class AffiliatizerTest extends TestCase {
     {
         $aff = $this->getTestAffiliatizer();
         $this->assertAffiliateUrl($aff, 'https://test-not-affed.com', 'https://test-not-affed.com');
-        $this->assertAffiliateUrl($aff, 'https://test-replace.com', 'https://test-replace.com?aff-tag=aff-value');
+        $this->assertAffiliateUrl($aff, 'https://test-append-path.com', 'https://test-append-path.com/affiliate/test');
+        $this->assertAffiliateUrl($aff, 'https://test-append-path.com?param=test', 'https://test-append-path.com/affiliate/test?param=test');
+        $this->assertAffiliateUrl($aff, 'https://test-append-path.com/somewhere?param=test', 'https://test-append-path.com/somewhere/affiliate/test?param=test');
+        $this->assertAffiliateUrl($aff, 'https://test-append-params.com', 'https://test-append-params.com?aff-tag1=aff-value1&aff-tag2=aff-value2');
         $this->assertAffiliateUrl($aff, 'https://test-redirect.com', 'https://redirect-to-me.com/?url=https%3A%2F%2Ftest-redirect.com');
     }
 
     private function getTestAffiliatizer()
     {
         return new Affiliatizer([
-            'test-replace.com' => [ 
-                'type' => Affiliatizer::AFFILIATIZER_TYPE_REPLACEMENT, 
-                'replacers' => [
-                    'aff-tag' => 'aff-value'
+            'test-append-path.com' => [ 
+                'type' => Affiliatizer::AFFILIATIZER_TYPE_APPEND_PATH, // 'append-path'
+                'path' => '/affiliate/test'
+            ],
+            'test-append-params.com' => [ 
+                'type' => Affiliatizer::AFFILIATIZER_TYPE_APPEND_PARAMS, // 'append-params'
+                'params' => [
+                    'aff-tag1' => 'aff-value1',
+                    'aff-tag2' => 'aff-value2'
                 ]
             ],
             'test-redirect.com' => [ 
-                'type' => Affiliatizer::AFFILIATIZER_TYPE_REDIRECT,
+                'type' => Affiliatizer::AFFILIATIZER_TYPE_REDIRECT, // 'redirect'
                 'destination' => 'https://redirect-to-me.com/?url=<URL>'
             ]
         ]);
